@@ -41,17 +41,59 @@
   },
   "lora_layers": {
     "targets": [
-      { "module_path": "transformer.transformer_blocks.{block}.attn.to_q", "rank": 16, "alpha": 32 },
-      { "module_path": "transformer.transformer_blocks.{block}.attn.to_k", "rank": 16, "alpha": 32 },
-      { "module_path": "transformer.transformer_blocks.{block}.attn.to_v", "rank": 16, "alpha": 32 },
-      { "module_path": "transformer.transformer_blocks.{block}.attn.to_out", "rank": 16, "alpha": 32 },
-      { "module_path": "transformer.single_transformer_blocks.{block}.attn.to_q", "rank": 16, "alpha": 32 },
-      { "module_path": "transformer.single_transformer_blocks.{block}.attn.to_k", "rank": 16, "alpha": 32 },
-      { "module_path": "transformer.single_transformer_blocks.{block}.attn.to_v", "rank": 16, "alpha": 32 },
-      { "module_path": "transformer.single_transformer_blocks.{block}.proj_mlp", "rank": 16, "alpha": 32 },
-      { "module_path": "transformer.single_transformer_blocks.{block}.proj_out", "rank": 16, "alpha": 32 }
+      {
+        "module_path": "transformer.transformer_blocks.{block}.attn.to_q",
+        "rank": 16,
+        "alpha": 32
+      },
+      {
+        "module_path": "transformer.transformer_blocks.{block}.attn.to_k",
+        "rank": 16,
+        "alpha": 32
+      },
+      {
+        "module_path": "transformer.transformer_blocks.{block}.attn.to_v",
+        "rank": 16,
+        "alpha": 32
+      },
+      {
+        "module_path": "transformer.transformer_blocks.{block}.attn.to_out",
+        "rank": 16,
+        "alpha": 32
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_q",
+        "rank": 16,
+        "alpha": 32
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_k",
+        "rank": 16,
+        "alpha": 32
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_v",
+        "rank": 16,
+        "alpha": 32
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.proj_mlp",
+        "rank": 16,
+        "alpha": 32
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.proj_out",
+        "rank": 16,
+        "alpha": 32
+      }
     ]
   },
-  "checkpoint": { "path": "checkpoints", "every_n_steps": 250 },
-  "monitoring": { "preview_images": [] }
+  "checkpoint": {
+    "path": "checkpoints",
+    "every_n_steps": 250
+  },
+  "monitoring": {
+    "plot_frequency": 100,
+    "generate_image_frequency": 250
+  }
 }

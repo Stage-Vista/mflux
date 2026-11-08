@@ -18,9 +18,9 @@
     "furnishing_furn_boost_ramp": 500,
     "furnishing_cfm_lambda": 0.05,
     "furnishing_plucker": true,
-    "furnishing_max_images": 160,
-    "furnishing_cond_w": 384,
-    "furnishing_cond_h": 256,
+    "furnishing_max_images": 8,
+    "furnishing_cond_w": 256,
+    "furnishing_cond_h": 192,
     "furnishing_self_anchors": true
   },
   "furnishing_data": {
@@ -40,114 +40,145 @@
     "learning_rate": 0.0001,
     "lr_warmup_steps": 200,
     "lr_schedule": "cosine",
-    "name": "adamw",
+    "name": "AdamW",
     "lr_total_steps": 20000
   },
   "lora_layers": {
     "targets": [
       {
-        "module_path": "transformer.transformer_blocks.{block}.attn.to_q",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.attn.to_q",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.transformer_blocks.{block}.attn.to_k",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.attn.to_k",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.transformer_blocks.{block}.attn.to_v",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.attn.to_v",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.transformer_blocks.{block}.attn.to_out",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.attn.to_out",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.transformer_blocks.{block}.mlp.fc1",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.attn.add_q_proj",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.transformer_blocks.{block}.mlp.fc2",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.attn.add_k_proj",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_q",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.attn.add_v_proj",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_k",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.attn.to_add_out",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_v",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.ff.linear_in",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.single_transformer_blocks.{block}.proj_mlp",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.ff.linear_out",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
       },
       {
-        "module_path": "transformer.single_transformer_blocks.{block}.proj_out",
-        "rank": 64,
-        "alpha": 128,
+        "module_path": "transformer_blocks.{block}.ff_context.linear_in",
         "blocks": {
           "start": 0,
-          "end": 8
-        }
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer_blocks.{block}.ff_context.linear_out",
+        "blocks": {
+          "start": 0,
+          "end": 5
+        },
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "single_transformer_blocks.{block}.attn.to_qkv_mlp_proj",
+        "blocks": {
+          "start": 0,
+          "end": 20
+        },
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "single_transformer_blocks.{block}.attn.to_out",
+        "blocks": {
+          "start": 0,
+          "end": 20
+        },
+        "rank": 64,
+        "alpha": 128
       }
     ]
   },
   "checkpoint": {
     "save_frequency": 250,
     "output_path": "checkpoints"
+  },
+  "monitoring": {
+    "plot_frequency": 100,
+    "generate_image_frequency": 250
   }
 }

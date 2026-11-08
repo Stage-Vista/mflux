@@ -25,8 +25,12 @@ class Iterator:
         current_permutation: list[int] | None = None,
         rng_state: tuple | None = None,
         start_date_time: datetime.datetime | None = None,
+        val_dataset: "Dataset | None" = None,
     ):
         self.dataset = dataset
+        # StageVista: optional held-out dataset for TRUE validation loss
+        # (None keeps upstream behavior: val batch sampled from train).
+        self.val_dataset = val_dataset
         self.batch_size = batch_size
         self.total_items = dataset.size()
         self.num_epochs = num_epochs
@@ -47,7 +51,8 @@ class Iterator:
             self._initialize_permutation()
 
     @staticmethod
-    def from_spec(training_spec: TrainingSpec, dataset: Dataset) -> "Iterator":
+    def from_spec(training_spec: TrainingSpec, dataset: Dataset,
+                  val_dataset: "Dataset | None" = None) -> "Iterator":
         if training_spec.training_loop.iterator_state_path is not None:
             return Iterator.from_json(training_spec=training_spec, iterator_path=training_spec.training_loop.iterator_state_path, dataset=dataset)  # fmt: off
 
@@ -56,6 +61,7 @@ class Iterator:
             dataset=dataset,
             batch_size=training_spec.training_loop.batch_size,
             num_epochs=training_spec.training_loop.num_epochs,
+            val_dataset=val_dataset,
         )
 
     def _initialize_permutation(self):
@@ -131,7 +137,10 @@ class Iterator:
             json.dump(self.to_dict(), f, indent=4)
 
     def get_validation_batch(self) -> Batch:
-        data_items = self.dataset.data
+        # StageVista: with val_dataset wired, validation is the held-out
+        # scenes (true holdout loss); otherwise legacy train-sample.
+        src = self.val_dataset if self.val_dataset is not None else self.dataset
+        data_items = src.data
         total = len(data_items)
         if total > 10:
             # Deterministic sample without affecting training RNG.

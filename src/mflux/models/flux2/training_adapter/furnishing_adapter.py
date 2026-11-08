@@ -31,7 +31,7 @@ from mflux.models.common.config.config import Config
 from mflux.models.common.config.model_config import ModelConfig
 from mflux.models.common.latent_creator.latent_creator import LatentCreator
 from mflux.models.flux2.latent_creator.flux2_latent_creator import Flux2LatentCreator
-from mflux.models.flux2.model.flux2_transformer.transformer import Flux2Transformer2DModel
+from mflux.models.flux2.model.flux2_transformer.transformer import Flux2Transformer as Flux2Transformer2DModel
 from mflux.models.flux2.training_adapter.flux2_base_training_adapter import Flux2BaseTrainingAdapter
 from mflux.models.flux2.variants.edit.flux2_klein_edit import Flux2KleinEdit
 from mflux.models.flux2.variants.edit.flux2_klein_edit_helpers import _Flux2KleinEditHelpers

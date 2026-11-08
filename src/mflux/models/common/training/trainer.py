@@ -306,6 +306,12 @@ class TrainingTrainer:
 
             if training_state.should_save(training_spec):
                 training_state.save(adapter, training_spec)
+                # StageVista: always render previews at every checkpoint so
+                # checkpoints are visually comparable (user-approved: previews
+                # may come from the train set).
+                if training_spec.monitoring is not None:
+                    TrainingTrainer._generate_previews_with_optimizer_offload(
+                        adapter, training_spec, training_state)
 
             if training_spec.low_ram:
                 mx.clear_cache()

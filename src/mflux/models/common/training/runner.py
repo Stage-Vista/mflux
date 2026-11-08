@@ -52,8 +52,11 @@ class TrainingRunner:
             lora.scale = 0.0
 
     @staticmethod
-    def _build_furnishing_dataset(*, adapter, training_spec: TrainingSpec) -> Dataset:
-        """Build the parquet-backed furnishing dataset and encode it once."""
+    def _build_furnishing_dataset(*, adapter, training_spec: TrainingSpec,
+                                  val: bool = False) -> Dataset:
+        """Build the parquet-backed furnishing dataset and encode it once.
+        val=True builds the held-out split (val_scenes_json as include set,
+        minus exclude set) for true validation loss."""
         import json as _json
         from mflux.models.flux2.training_adapter.furnishing_adapter import FurnishingConfig
         from mflux.models.flux2.training_adapter.furnishing_dataset import (
@@ -65,13 +68,15 @@ class TrainingRunner:
         exclude = include = None
         if fd.get("exclude_scenes_json"):
             exclude = set(_json.load(open(fd["exclude_scenes_json"])))
-        if fd.get("val_scenes_json"):
+        if val:
+            # held-out split: val scenes, and never overlapping train exclude
             include = set(_json.load(open(fd["val_scenes_json"])))
+            exclude = None
         rows = load_rows(root, exclude=exclude, include=include,
                          max_row_views=fd.get("max_row_views"))
         fc = (adapter.furn if hasattr(adapter, "furn")
               else FurnishingConfig(training_spec.furnishing))
-        ds = FurnishingDataset(rows, fc, seed=training_spec.seed,
+        ds = FurnishingDataset(rows, fc, seed=training_spec.seed + (1 if val else 0),
                                path_prefix=prefix)
         ds.encode_all(adapter)
         return ds
@@ -214,7 +219,13 @@ class TrainingRunner:
         if training_spec.furnishing_data:
             dataset = TrainingRunner._build_furnishing_dataset(
                 adapter=adapter, training_spec=training_spec)
-            iterator = Iterator.from_spec(training_spec=training_spec, dataset=dataset)
+            # StageVista: also build the held-out (val_scenes_json) dataset so
+            # validation loss is true holdout, not a train sample.
+            val_dataset = TrainingRunner._build_furnishing_dataset(
+                adapter=adapter, training_spec=training_spec, val=True)
+            iterator = Iterator.from_spec(training_spec=training_spec,
+                                          dataset=dataset,
+                                          val_dataset=val_dataset)
             optimizer = Optimizer.from_spec(training_spec)
             statistics = Statistics.from_spec(training_spec)
             training_state = TrainingState(iterator=iterator, optimizer=optimizer, statistics=statistics)
