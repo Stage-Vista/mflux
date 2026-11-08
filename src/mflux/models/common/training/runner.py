@@ -78,7 +78,24 @@ class TrainingRunner:
               else FurnishingConfig(training_spec.furnishing))
         ds = FurnishingDataset(rows, fc, seed=training_spec.seed + (1 if val else 0),
                                path_prefix=prefix)
-        ds.encode_all(adapter)
+        # StageVista: disk-cache the encoded rows when low_ram is on (or a
+        # cache dir is configured), so a killed run resumes the encode instead
+        # of starting over. Cache key = absolute parquet root + split.
+        cache_dir = fd.get("cache_dir")
+        if training_spec.low_ram or cache_dir:
+            from pathlib import Path as _P
+            from mflux.models.common.training.dataset.data_cache import (
+                CachePaths, TrainingDataCache)
+            if cache_dir:
+                croot = _P(cache_dir) / ("val" if val else "train")
+            else:
+                croot = _P(root).parent / ".mflux_cache" / "furnishing" / (
+                    "val" if val else "train")
+            paths = CachePaths(root=croot, data=croot / "data")
+            paths.data.mkdir(parents=True, exist_ok=True)
+            ds.encode_all(adapter, cache_paths=paths)
+        else:
+            ds.encode_all(adapter)
         return ds
 
     @staticmethod

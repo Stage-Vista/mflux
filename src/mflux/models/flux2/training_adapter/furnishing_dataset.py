@@ -149,14 +149,40 @@ class FurnishingDataset(Dataset):
         self._path_prefix = path_prefix
         super().__init__([])
 
-    def encode_all(self, adapter) -> None:
+    def encode_all(self, adapter, cache_paths=None) -> None:
+        """Encode all rows. With cache_paths (a CachePaths), each encoded row
+        is written to disk immediately and SKIPPED if already cached, so a
+        killed/interrupted run resumes the encode instead of restarting."""
         import gc
+        from mflux.models.common.training.dataset.data_cache import TrainingDataCache
         vae = adapter._flux2.vae
         tiling = adapter._flux2.tiling_config
         cw, ch = self._fc.cond_w, self._fc.cond_h
         items: list[DataItem] = []
         from tqdm import tqdm
         for i, row in enumerate(tqdm(self._rows, desc="encoding furnishing rows")):
+            if cache_paths is not None:
+                tp = cache_paths.data / f"{i:07d}.safetensors"
+                mp = cache_paths.data / f"{i:07d}.json"
+                if tp.exists() and mp.exists():
+                    clean_latents, cond, w, h = TrainingDataCache.load_tensors(
+                        paths=cache_paths, data_id=i)
+                    meta = json.load(open(mp))
+                    # restore list-of-blocks cond entries
+                    row_scene = row.get("scene_key", "")
+                    for k in ("gt_tokens_list", "anchor_tokens_list"):
+                        if k in cond and cond[k].ndim == 3:
+                            pass  # keep stacked; trainer indexes via [j]
+                    cond = dict(cond)
+                    cond.setdefault("scene", row_scene)
+                    items.append(DataItem(
+                        data_id=i, prompt=meta.get("prompt", ""),
+                        image_path=meta.get("image_path", ""),
+                        clean_latents=clean_latents, cond=cond,
+                        width=w, height=h))
+                    gc.collect()
+                    mx.clear_cache()
+                    continue
             s = build_sample(row, self._fc, self._path_prefix)
             prompt_embeds, text_ids = adapter._encode_prompt(prompt=s["prompt"])
             mx.eval(prompt_embeds, text_ids)
@@ -220,6 +246,20 @@ class FurnishingDataset(Dataset):
             items.append(DataItem(
                 data_id=i, prompt=s["prompt"], image_path="",
                 clean_latents=block_tokens, cond=cond, width=cw, height=ch))
+            if cache_paths is not None:
+                # persist this row's tensors via the stock cache (cond must be
+                # dict[str, mx.array]; lists are stacked). The "scene" string
+                # is re-derivable from the row itself, so keep it out of tensors.
+                flat_cond = {}
+                for k, v in cond.items():
+                    if isinstance(v, list):
+                        flat_cond[k] = mx.stack([x for x in v], axis=0)
+                    elif isinstance(v, mx.array):
+                        flat_cond[k] = v
+                TrainingDataCache.save_item(
+                    paths=cache_paths, data_id=i, prompt=s["prompt"],
+                    image_path="", width=cw, height=ch,
+                    clean_latents=block_tokens, cond=flat_cond)
         self.data = items
 
 

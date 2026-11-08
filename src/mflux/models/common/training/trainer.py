@@ -133,7 +133,10 @@ class TrainingTrainer:
         anchors = None
         if fcfg is not None and fcfg.delta_residual and isinstance(cond, dict) \
                 and cond.get("anchor_tokens_list"):
-            anchors = mx.concatenate(cond["anchor_tokens_list"], axis=1)
+            _al = cond["anchor_tokens_list"]
+            if isinstance(_al, mx.array):  # cache-restored stacked form
+                _al = [_al[j:j + 1] for j in range(_al.shape[0])]
+            anchors = mx.concatenate(_al, axis=1)
             if anchors.shape[1] == clean_image.shape[1]:
                 x0 = clean_image - anchors
             else:
