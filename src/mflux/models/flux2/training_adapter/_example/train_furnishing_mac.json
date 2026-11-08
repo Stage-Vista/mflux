@@ -1,0 +1,110 @@
+{
+  "model": "black-forest-labs/FLUX.2-klein-base-4B",
+  "is_edit": true,
+  "seed": 42,
+  "steps": 20000,
+  "guidance": 1.0,
+  "quantize": 4,
+  "max_resolution": 512,
+  "low_ram": true,
+  "gradient_checkpointing": true,
+  "cache_limit_gb": 8,
+  "furnishing": {
+    "furnishing_delta_residual": true,
+    "furnishing_sigma_shift": 3.0,
+    "furnishing_furn_delta_thresh": 0.5,
+    "furnishing_furn_boost": "auto",
+    "furnishing_furn_boost_cap": 3.0,
+    "furnishing_furn_boost_ramp": 500,
+    "furnishing_cfm_lambda": 0.05,
+    "furnishing_plucker": true,
+    "furnishing_max_images": 160,
+    "furnishing_cond_w": 384,
+    "furnishing_cond_h": 256,
+    "furnishing_self_anchors": true
+  },
+  "furnishing_data": {
+    "parquet_root": "/Volumes/Seagate/furnishing/parquet/pairs_index",
+    "path_prefix": "",
+    "exclude_scenes_json": "/Users/dhruvabharadwaj/StageVista/repos/3DRecon/holdout_scenes.json",
+    "val_scenes_json": "/Users/dhruvabharadwaj/StageVista/repos/3DRecon/holdout_scenes.json",
+    "max_row_views": 160
+  },
+  "training_loop": {
+    "batch_size": 1,
+    "num_epochs": null,
+    "gradient_accumulation_steps": 8
+  },
+  "optimizer": {
+    "lr": 0.0001,
+    "warmup_steps": 200,
+    "lr_schedule": "cosine",
+    "max_grad_norm": 1.0
+  },
+  "lora_layers": {
+    "targets": [
+      {
+        "module_path": "transformer.transformer_blocks.{block}.attn.to_q",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.transformer_blocks.{block}.attn.to_k",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.transformer_blocks.{block}.attn.to_v",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.transformer_blocks.{block}.attn.to_out",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.transformer_blocks.{block}.mlp.fc1",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.transformer_blocks.{block}.mlp.fc2",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_q",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_k",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.attn.to_v",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.proj_mlp",
+        "rank": 64,
+        "alpha": 128
+      },
+      {
+        "module_path": "transformer.single_transformer_blocks.{block}.proj_out",
+        "rank": 64,
+        "alpha": 128
+      }
+    ]
+  },
+  "checkpoint": {
+    "path": "checkpoints",
+    "every_n_steps": 250
+  },
+  "monitoring": {
+    "preview_every_n_steps": 500
+  }
+}

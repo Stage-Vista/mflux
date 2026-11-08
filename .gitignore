@@ -19,6 +19,8 @@
 !src/mflux/models/common/training/_example/train_ernie_image_turbo.json
 !src/mflux/models/common/training/_example/train_ernie_image.json
 !tests/training/config/train.json
+!src/mflux/models/flux2/training_adapter/_example/train_furnishing.json
+!src/mflux/models/flux2/training_adapter/_example/train_furnishing_mac.json
 tests/training/tmp/
 
 *.egg-info
