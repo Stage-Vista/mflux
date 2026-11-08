@@ -155,7 +155,8 @@ class FurnishingDataset(Dataset):
         tiling = adapter._flux2.tiling_config
         cw, ch = self._fc.cond_w, self._fc.cond_h
         items: list[DataItem] = []
-        for i, row in enumerate(self._rows):
+        from tqdm import tqdm
+        for i, row in enumerate(tqdm(self._rows, desc="encoding furnishing rows")):
             s = build_sample(row, self._fc, self._path_prefix)
             prompt_embeds, text_ids = adapter._encode_prompt(prompt=s["prompt"])
             mx.eval(prompt_embeds, text_ids)
