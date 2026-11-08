@@ -212,10 +212,11 @@ class FurnishingDataset(Dataset):
 
 
 def _set_t(ids: mx.array, t: float) -> mx.array:
-    out = ids.copy()
-    return mx.concatenate([mx.full((out.shape[0], out.shape[1], 1), t,
-                                   dtype=out.dtype),
-                           out[..., 1:]], axis=2)
+    # ids: (B, T, 4) with col 0 = T coord; replace it. MLX arrays are
+    # immutable — build the new column and concat, no .copy().
+    return mx.concatenate([mx.full((ids.shape[0], ids.shape[1], 1), t,
+                                   dtype=ids.dtype),
+                           ids[..., 1:]], axis=2)
 
 
 def _plucker_for_map(v: dict, cw: int, ch: int) -> np.ndarray:
