@@ -92,6 +92,8 @@ class Plotter:
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- StageVista: live reload every 15s so the loss plot tracks a running train -->
+    <meta http-equiv="refresh" content="15" />
     <title>Loss</title>
     <style>
       :root {{

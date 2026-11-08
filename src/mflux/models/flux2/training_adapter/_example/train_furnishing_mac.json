@@ -178,7 +178,7 @@
     "output_path": "checkpoints"
   },
   "monitoring": {
-    "plot_frequency": 10,
+    "plot_frequency": 100,
     "generate_image_frequency": 250
   }
 }
