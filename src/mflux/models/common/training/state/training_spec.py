@@ -350,7 +350,7 @@ class TrainingSpec:
         preview_prompt_names: list[str] = []
         preview_images_by_stem: dict[str, Path] = {}
         preview_image_paths: list[Path] = []
-        if monitoring_conf is not None:
+        if monitoring_conf is not None and not config.get("furnishing_data"):
             preview_prompt_paths = TrainingSpec._find_preview_prompt_files(data_root_dir)
             preview_prompts = TrainingSpec._load_preview_prompts(preview_prompt_paths)
             preview_prompt_names = [path.stem for path in preview_prompt_paths]
@@ -405,10 +405,18 @@ class TrainingSpec:
         # Track whether we're using fallback prompts (for edit training preview image logic)
         using_fallback_prompts = False
         if monitoring_conf is not None and not preview_prompts:
-            # Fallback to the first data prompt if no preview*.txt is provided (works for both txt2img and edit).
-            preview_prompts = [data[0].prompt]
-            preview_prompt_names = [data[0].image.stem]
-            using_fallback_prompts = True
+            if config.get("furnishing_data"):
+                # StageVista furnishing: no file-pair data list; previews come
+                # from train rows at checkpoint time (runner wires that), so
+                # use placeholder prompt names and skip file-based fallback.
+                preview_prompts = ["furnishing preview"]
+                preview_prompt_names = ["furnishing"]
+                using_fallback_prompts = True
+            else:
+                # Fallback to the first data prompt if no preview*.txt is provided (works for both txt2img and edit).
+                preview_prompts = [data[0].prompt]
+                preview_prompt_names = [data[0].image.stem]
+                using_fallback_prompts = True
 
         monitoring = (
             None
@@ -447,9 +455,14 @@ class TrainingSpec:
 
         lora_layers = LoraLayersSpec(targets=targets)
 
-        if is_edit and any(item.input_image is None for item in data):
+        if config.get("furnishing_data"):
+            # StageVista furnishing: no file-pair data; previews are rendered
+            # from train rows at checkpoint time by the trainer, so skip the
+            # file-based preview image requirements entirely.
+            pass
+        elif is_edit and any(item.input_image is None for item in data):
             raise ValueError("Edit training requires input_image for every data item.")
-        if is_edit and monitoring is not None:
+        if is_edit and monitoring is not None and not config.get("furnishing_data"):
             # For edit training, if preview prompts were explicitly provided (not fallback), require matching preview images.
             # If using fallback, use the first input image as the preview conditioning image.
             if using_fallback_prompts:
