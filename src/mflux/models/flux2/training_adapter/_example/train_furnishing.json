@@ -93,7 +93,7 @@
     "every_n_steps": 250
   },
   "monitoring": {
-    "plot_frequency": 100,
+    "plot_frequency": 10,
     "generate_image_frequency": 250
   }
 }
