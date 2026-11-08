@@ -8,7 +8,7 @@
   "max_resolution": 512,
   "low_ram": true,
   "gradient_checkpointing": true,
-  "cache_limit_gb": 8,
+  "cache_limit_gb": 5,
   "furnishing": {
     "furnishing_delta_residual": true,
     "furnishing_sigma_shift": 3.0,
