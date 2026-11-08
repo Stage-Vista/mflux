@@ -29,7 +29,7 @@
     "exclude_scenes_json": "/Users/dhruvabharadwaj/StageVista/repos/3DRecon/holdout_scenes.json",
     "val_scenes_json": "/Users/dhruvabharadwaj/StageVista/repos/3DRecon/holdout_scenes.json",
     "max_row_views": 160,
-    "cache_dir": "/Volumes/Seagate/furnishing/.mflux_cache/furnishing"
+    "cache_dir": "/Volumes/Seagate/furnishing/parquet/.mflux_cache/furnishing"
   },
   "training_loop": {
     "batch_size": 1,
