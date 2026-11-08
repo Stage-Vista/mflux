@@ -310,7 +310,13 @@ class TrainingSpec:
         if max_resolution is not None and max_resolution <= 0:
             raise ValueError("'max_resolution' must be > 0")
 
-        data_conf = config["data"]
+        if config.get("furnishing_data"):
+            # StageVista furnishing recipe: dataset comes from the parquet
+            # root, not a file-pair data dir. Use a dummy path so the rest
+            # of from_conf has something to resolve.
+            data_conf = config.get("data") or "."
+        else:
+            data_conf = config["data"]
         if isinstance(data_conf, str):
             absolute_or_relative_path = data_conf
         elif isinstance(data_conf, dict):
@@ -352,12 +358,19 @@ class TrainingSpec:
             preview_image_paths = list(preview_images_by_stem.values())
 
         # Auto-discovery: all images in data path with matching .txt prompt files
-        data = TrainingSpec._discover_data(
-            data_path=absolute_or_relative_path,
-            base_path=absolute_config_path,
-            exclude_paths=None if not preview_image_paths else set(preview_image_paths),
-        )
-        is_edit = any(item.input_image is not None for item in data)
+        if config.get("furnishing_data"):
+            # StageVista furnishing recipe: dataset comes from the parquet
+            # root (see runner._build_furnishing_dataset); skip file-pair
+            # discovery entirely.
+            data = []
+            is_edit = True
+        else:
+            data = TrainingSpec._discover_data(
+                data_path=absolute_or_relative_path,
+                base_path=absolute_config_path,
+                exclude_paths=None if not preview_image_paths else set(preview_image_paths),
+            )
+            is_edit = any(item.input_image is not None for item in data)
 
         training_loop_conf = config["training_loop"].copy()
 

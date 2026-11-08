@@ -32,79 +32,122 @@
   },
   "training_loop": {
     "batch_size": 1,
-    "num_epochs": null,
-    "gradient_accumulation_steps": 8
+    "num_epochs": null
   },
   "optimizer": {
-    "lr": 0.0001,
-    "warmup_steps": 200,
+    "max_grad_norm": 1.0,
+    "gradient_accumulation_steps": 8,
+    "learning_rate": 0.0001,
+    "lr_warmup_steps": 200,
     "lr_schedule": "cosine",
-    "max_grad_norm": 1.0
+    "name": "adamw",
+    "lr_total_steps": 20000
   },
   "lora_layers": {
     "targets": [
       {
         "module_path": "transformer.transformer_blocks.{block}.attn.to_q",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.transformer_blocks.{block}.attn.to_k",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.transformer_blocks.{block}.attn.to_v",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.transformer_blocks.{block}.attn.to_out",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.transformer_blocks.{block}.mlp.fc1",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.transformer_blocks.{block}.mlp.fc2",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.single_transformer_blocks.{block}.attn.to_q",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.single_transformer_blocks.{block}.attn.to_k",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.single_transformer_blocks.{block}.attn.to_v",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.single_transformer_blocks.{block}.proj_mlp",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       },
       {
         "module_path": "transformer.single_transformer_blocks.{block}.proj_out",
         "rank": 64,
-        "alpha": 128
+        "alpha": 128,
+        "blocks": {
+          "start": 0,
+          "end": 8
+        }
       }
     ]
   },
   "checkpoint": {
-    "path": "checkpoints",
-    "every_n_steps": 250
-  },
-  "monitoring": {
-    "preview_every_n_steps": 500
+    "save_frequency": 250,
+    "output_path": "checkpoints"
   }
 }
