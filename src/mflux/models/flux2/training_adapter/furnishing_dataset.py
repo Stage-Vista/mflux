@@ -115,11 +115,15 @@ def build_sample(row: dict, fc: FurnishingConfig, path_prefix: str = "") -> dict
 
 
 def _encode_one(vae, tiling_config, path: str, w: int, h: int):
-    """image file -> (packed_tokens (1,T,C), grid_ids (1,T,4)) at w x h."""
-    import PIL.Image as _I
-    img = ImageUtil.load_image(path).convert("RGB").resize((w, h), _I.LANCZOS)
-    encoded = VAEUtil.encode(vae=vae, image=ImageUtil.to_array(img),
-                             tiling_config=tiling_config)
+    """image file -> (packed_tokens (1,T,C), grid_ids (1,T,4)) at w x h.
+
+    Goes through LatentCreator.encode_image exactly like the stock edit
+    adapter (_encode_output_latents) so normalization/batch-dim/dtype match
+    what the VAE expects — a hand-rolled resize+to_array+VAEUtil.encode blew
+    the Metal buffer limit on the first row."""
+    from mflux.models.common.latent_creator.latent_creator import LatentCreator
+    encoded = LatentCreator.encode_image(
+        vae=vae, image_path=path, height=h, width=w, tiling_config=tiling_config)
     encoded = _Flux2KleinEditHelpers.ensure_4d_latents(encoded)
     encoded = _Flux2KleinEditHelpers.crop_to_even_spatial(encoded)
     encoded = Flux2LatentCreator.patchify_latents(encoded)
