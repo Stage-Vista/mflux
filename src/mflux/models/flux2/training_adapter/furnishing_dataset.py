@@ -150,6 +150,7 @@ class FurnishingDataset(Dataset):
         super().__init__([])
 
     def encode_all(self, adapter) -> None:
+        import gc
         vae = adapter._flux2.vae
         tiling = adapter._flux2.tiling_config
         cw, ch = self._fc.cond_w, self._fc.cond_h
@@ -157,22 +158,28 @@ class FurnishingDataset(Dataset):
         for i, row in enumerate(self._rows):
             s = build_sample(row, self._fc, self._path_prefix)
             prompt_embeds, text_ids = adapter._encode_prompt(prompt=s["prompt"])
+            mx.eval(prompt_embeds, text_ids)
 
             gt_lat, gt_ids = [], []
             for p in s["gt_paths"]:
                 tok, ids = _encode_one(vae, tiling, p, cw, ch)
+                mx.eval(tok, ids)
                 gt_lat.append(tok)
-                ids = mx.array(ids)  # (1,T,4)
-                gt_ids.append(ids)
-            anc_lat, _ = [], []
+                gt_ids.append(mx.array(ids))
+            anc_lat = []
             for p in s["unfurnished_paths"]:
                 tok, _ = _encode_one(vae, tiling, p, cw, ch)
+                mx.eval(tok)
                 anc_lat.append(tok)
             ref_lat, ref_ids = [], []
             for p in s["ref_paths"]:
                 tok, ids = _encode_one(vae, tiling, p, cw, ch)
+                mx.eval(tok, ids)
                 ref_lat.append(tok)
                 ref_ids.append(mx.array(ids))
+            # free the VAE's transient buffers after each row's encodes
+            gc.collect()
+            mx.clear_cache()
 
             block_tokens = mx.concatenate(gt_lat, axis=1) if len(gt_lat) > 1 else gt_lat[0]
             # per-image T-coords: noised blocks t=0..K-1, refs t=10,20,...
