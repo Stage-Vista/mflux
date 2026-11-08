@@ -126,22 +126,78 @@ class TrainingTrainer:
             key=mx.random.key(noise_seed),
         )
 
+        # --- StageVista furnishing recipe hooks ---
+        cond = item.cond
+        fcfg = getattr(adapter, "furn", None)  # FurnishingConfig or None
+        x0 = clean_image
+        anchors = None
+        if fcfg is not None and fcfg.delta_residual and isinstance(cond, dict) \
+                and cond.get("anchor_tokens_list"):
+            anchors = mx.concatenate(cond["anchor_tokens_list"], axis=1)
+            if anchors.shape[1] == clean_image.shape[1]:
+                x0 = clean_image - anchors
+            else:
+                anchors = None
+        sigma_t = sigmas[t]
         latents_t = LatentCreator.add_noise_by_interpolation(
-            clean=clean_image,
+            clean=x0,
             noise=pure_noise,
-            sigma=sigmas[t],
+            sigma=sigma_t,
         )
 
         predicted_noise = adapter.predict_noise(
             t=t,
             latents_t=latents_t,
             sigmas=sigmas,
-            cond=adapter.training_condition(cond=item.cond, rng=rng) if training else item.cond,
+            cond=adapter.training_condition(cond=cond, rng=rng) if training else cond,
             config=config,
         )
 
-        error = (clean_image + predicted_noise - pure_noise).square()
-        return error.mean()
+        # velocity target v = noise - x0; prediction error in velocity space
+        pred_v = predicted_noise + x0 - clean_image if anchors is not None else predicted_noise
+        # NB: for the standard arm (no anchors), mflux's convention is noise
+        # prediction with error (clean + pred - noise)^2; keep that exactly.
+        if anchors is None:
+            error = (clean_image + predicted_noise - pure_noise).square()
+            return error.mean()
+
+        # furnishing arm: velocity-space error, per-token, over noised blocks
+        tgt_v = pure_noise - x0
+        err = (pred_v - tgt_v).square().mean(axis=-1)  # (1, T)
+        # furniture mask from |GT - anchor| per token
+        delta = mx.abs(clean_image - anchors).mean(axis=-1)  # (1, T)
+        m = delta > fcfg.furn_delta_thresh
+        T = err.shape[1]
+        # furn_boost: fixed float or 'auto' inverse-fraction, optional ramp
+        try:
+            boost_fixed = float(fcfg.furn_boost)
+            auto = False
+        except (TypeError, ValueError):
+            auto = str(fcfg.furn_boost).strip().lower() == "auto"
+            boost_fixed = 1.0
+        ramp_f = 1.0
+        if fcfg.furn_boost_ramp > 0 and (auto or boost_fixed != 1.0):
+            step = getattr(TrainingTrainer, "_current_step", 0)
+            ramp_f = min(1.0, step / fcfg.furn_boost_ramp)
+        if auto:
+            frac = mx.maximum(m.mean(), mx.array(1.0 / T))
+            bj = mx.minimum(1.0 / frac, mx.array(fcfg.furn_boost_cap))
+            bj = 1.0 + (bj - 1.0) * ramp_f
+        elif boost_fixed != 1.0:
+            bj = 1.0 + (boost_fixed - 1.0) * ramp_f
+        else:
+            bj = mx.array(1.0)
+        wtok = mx.where(m, bj, mx.array(1.0))
+        loss = (err * wtok).mean()
+        # ΔFM repulsion vs rolling previous-collate negative (different scene)
+        if training and fcfg.cfm_lambda > 0.0:
+            prev = getattr(TrainingTrainer, "_prev_pair", None)
+            if prev is not None and prev[2] != cond.get("scene"):
+                pg, pn = prev[0][:T], prev[1][:T]
+                neg_tgt = pn - pg
+                loss = loss - fcfg.cfm_lambda * ((pred_v[:, :T] - neg_tgt).square().mean())
+            TrainingTrainer._prev_pair = (x0, pure_noise, cond.get("scene"))
+        return loss
 
     @staticmethod
     def train(
@@ -194,6 +250,7 @@ class TrainingTrainer:
         accumulated_count = 0
         nonfinite_skips = 0
         for batch in batches:
+            TrainingTrainer._current_step = training_state.iterator.num_iterations
             loss, grads = train_step_function(batch)
             if gradient_checkpointing:
                 TrainingTrainer._evaluate_backward_in_block_order(loss, grads)

@@ -28,6 +28,10 @@ from mflux.models.ernie_image.training_adapter.ernie_training_adapter import Ern
 from mflux.models.fibo2.training_adapter.fibo2_training_adapter import Fibo2TrainingAdapter
 from mflux.models.flux2.training_adapter.flux2_edit_training_adapter import Flux2EditTrainingAdapter
 from mflux.models.flux2.training_adapter.flux2_training_adapter import Flux2TrainingAdapter
+
+# StageVista furnishing recipe (optional; imported lazily below to keep the
+# base import graph unchanged)
+FURNISHING_MODEL_TAG = "furnishing"
 from mflux.models.iris.training_adapter.iris_training_adapter import IrisTrainingAdapter
 from mflux.models.krea2.training_adapter.krea2_training_adapter import Krea2TrainingAdapter
 from mflux.models.qwen21.training_adapter.qwen21_comfy_lora import Qwen21ComfyLoRA
@@ -46,6 +50,31 @@ class TrainingRunner:
         # Ensure any assistant LoRA(s) do not affect inference outputs after training.
         for lora in TrainingUtil.iter_assistant_loras(transformer):
             lora.scale = 0.0
+
+    @staticmethod
+    def _build_furnishing_dataset(*, adapter, training_spec: TrainingSpec) -> Dataset:
+        """Build the parquet-backed furnishing dataset and encode it once."""
+        import json as _json
+        from mflux.models.flux2.training_adapter.furnishing_adapter import FurnishingConfig
+        from mflux.models.flux2.training_adapter.furnishing_dataset import (
+            FurnishingDataset, load_rows)
+
+        fd = training_spec.furnishing_data or {}
+        root = fd["parquet_root"]
+        prefix = fd.get("path_prefix", "")
+        exclude = include = None
+        if fd.get("exclude_scenes_json"):
+            exclude = set(_json.load(open(fd["exclude_scenes_json"])))
+        if fd.get("val_scenes_json"):
+            include = set(_json.load(open(fd["val_scenes_json"])))
+        rows = load_rows(root, exclude=exclude, include=include,
+                         max_row_views=fd.get("max_row_views"))
+        fc = (adapter.furn if hasattr(adapter, "furn")
+              else FurnishingConfig(training_spec.furnishing))
+        ds = FurnishingDataset(rows, fc, seed=training_spec.seed,
+                               path_prefix=prefix)
+        ds.encode_all(adapter)
+        return ds
 
     @staticmethod
     def _check_timestep_options(adapter_class: type[TrainingAdapter], training_spec: TrainingSpec) -> None:
@@ -120,8 +149,15 @@ class TrainingRunner:
             adapter_class = ErnieTrainingAdapter
         elif is_zimage:
             adapter_class = ZImageTrainingAdapter
-        elif training_spec.is_edit:
-            adapter_class = Flux2EditTrainingAdapter
+        elif training_spec.is_edit and training_spec.furnishing:
+            # StageVista furnishing recipe on klein-base: parquet data,
+            # multi-block noised views, Plücker head, delta-residual.
+            from mflux.models.flux2.training_adapter.furnishing_adapter import (
+                FurnishingConfig, FurnishingPairsAdapter)
+            adapter = FurnishingPairsAdapter(
+                model_config=model_config, quantize=training_spec.quantize,
+                furnishing=FurnishingConfig(training_spec.furnishing))
+            adapter_class = None  # adapter already built
         elif is_flux2:
             adapter_class = Flux2TrainingAdapter
         elif is_krea2:
@@ -140,10 +176,12 @@ class TrainingRunner:
         else:
             raise ValueError("Flux1 training is no longer supported.")
 
-        TrainingRunner._check_timestep_options(adapter_class, training_spec)
-        adapter = adapter_class(
-            model_config=model_config, quantize=training_spec.quantize, model_path=training_spec.model_path
-        )
+        if adapter_class is not None:
+            TrainingRunner._check_timestep_options(adapter_class, training_spec)
+            adapter = adapter_class(
+                model_config=model_config, quantize=training_spec.quantize, model_path=training_spec.model_path
+            )
+        # else: furnishing adapter already constructed above
 
         if training_spec.low_ram:
             TrainingRunner._apply_low_ram_tiling(adapter.model())
@@ -170,6 +208,23 @@ class TrainingRunner:
         optimizer = None
         statistics = None
         training_state = None
+
+        # StageVista furnishing recipe: build the parquet dataset instead of
+        # the file-pair data list.
+        if training_spec.furnishing_data:
+            dataset = TrainingRunner._build_furnishing_dataset(
+                adapter=adapter, training_spec=training_spec)
+            iterator = Iterator.from_spec(training_spec=training_spec, dataset=dataset)
+            optimizer = Optimizer.from_spec(training_spec)
+            statistics = Statistics.from_spec(training_spec)
+            training_state = TrainingState(iterator=iterator, optimizer=optimizer, statistics=statistics)
+            try:
+                TrainingTrainer.train(adapter=adapter, training_spec=training_spec, training_state=training_state)
+                return adapter, training_spec
+            except StopTrainingException:
+                training_state.save(adapter, training_spec)
+                raise
+            return adapter, training_spec
 
         # Prepare dataset data
         if training_spec.low_ram:

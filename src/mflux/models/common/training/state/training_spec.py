@@ -266,6 +266,13 @@ class TrainingSpec:
     # memory of roughly "weights + two blocks" instead of "weights + every block"; this is what
     # makes edit training fit on 32-36 GB machines.
     gradient_checkpointing: bool = False
+    # StageVista furnishing recipe (parsed from the top-level "furnishing"
+    # object in train.json; see furnishing_adapter.FurnishingConfig).
+    furnishing: dict | None = None
+    # Optional parquet dataset for furnishing training:
+    # {"parquet_root": ..., "path_prefix": ..., "exclude_scenes_json": ...,
+    #  "val_scenes_json": ..., "max_row_views": ...}
+    furnishing_data: dict | None = None
 
     @staticmethod
     def resolve(
@@ -475,6 +482,8 @@ class TrainingSpec:
             low_ram=low_ram,
             cache_limit_gb=cache_limit_gb,
             gradient_checkpointing=gradient_checkpointing,
+            furnishing=config.get("furnishing"),
+            furnishing_data=config.get("furnishing_data"),
         )
 
     @staticmethod
